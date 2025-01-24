@@ -21,10 +21,10 @@ def load_level():
 def save():
     pass
 
-def cut_sheet(rect, sheet, col_from, row_from, col_to, row_to):
+def cut_sheet(rect, sheet, rows, cols):
     frames = []
-    for y in range(row_from, row_to):
-        for x in range(col_from, col_to):
+    for y in range(rows):
+        for x in range(cols):
             frames.append(sheet.subsurface(pygame.Rect((rect.w * x, rect.h * y), rect.size)))
     return frames
 
@@ -32,9 +32,9 @@ def cut_sheet(rect, sheet, col_from, row_from, col_to, row_to):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(player_group, all_sprites)
-        self.rect = pygame.Rect(0, 0, 98, 100)
-        self.running = cut_sheet(self.rect, load_image('sprites/'))
-        self.attack = []
+        self.rect = pygame.Rect(0, 0, 75, 95)
+        self.running = cut_sheet(self.rect, load_image('sprites/player/running.png'), 1, 10)
+        self.attack = cut_sheet(self.rect, load_image('sprites/player/attack.png'), 1, 10)
 
 
 class Enemy(pygame.sprite.Sprite):
