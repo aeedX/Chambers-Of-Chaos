@@ -89,14 +89,14 @@ class Tile(pygame.sprite.Sprite):
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 
-if __name__ == '__main__':
+"""if __name__ == '__main__':
     pygame.init()
     size = WIDTH, HEIGHT = 1700, 1000
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
     FPS = 50
     step = 20
-    '''start_screen()'''
+    start_screen()
     p_coord, level_x, level_y = generate_level(load_level('sprites/levels/scene/level4.txt'))
     all_sprites.draw(screen)
     pygame.display.flip()
@@ -107,4 +107,4 @@ if __name__ == '__main__':
         all_sprites.draw(screen)
         tiles_group.draw(screen)
         pygame.display.flip()
-        clock.tick(FPS)
+        clock.tick(FPS)"""
