@@ -160,14 +160,18 @@ class Player(pygame.sprite.Sprite):
         prev_x, prev_y = self.x, self.y
         if self.direction == 1:
             self.y -= 5
+            prev_y += 5
         elif self.direction == 2:
             self.flip = False
             self.x -= 5
+            prev_x += 5
         elif self.direction == 3:
             self.y += 5
+            prev_y -= 5
         elif self.direction == 4:
             self.flip = True
             self.x += 5
+            prev_x -= 5
         if pygame.sprite.spritecollideany(self, collision_group):
             self.x, self.y = prev_x, prev_y
 
