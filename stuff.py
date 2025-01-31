@@ -3,11 +3,9 @@ import sys, os
 
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
-collision_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
 
-collision_tiles = ['wall']
 tile_width = tile_height = 64
 
 def load_image(name):
@@ -33,18 +31,14 @@ def save():
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
-        if tile_type in collision_tiles:
-            super().__init__(tiles_group, all_sprites, collision_group)
-        else:
-            super().__init__(tiles_group, all_sprites)
+        super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
-        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
 
 
 class Level:
     def __init__(self):
-        self.lvl_id = 1
+        self.lvl_id = 0
         self.lvl = []
         self.spawnpoints = []
         self.load_level(self.lvl_id)
@@ -104,7 +98,7 @@ def cut_sheet(sheet, rows, cols):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(player_group, all_sprites)
-        self.x, self.y = 200, 200
+        self.x, self.y = 100, 100
         self.direction, self.attack = 0, 0
         self.rect = pygame.Rect(0, 0, 0, 0)
         img_run = load_image('sprites/player/running.png')
@@ -115,7 +109,6 @@ class Player(pygame.sprite.Sprite):
         self.frame, self.state = 0, 0
         self.flip = False
         self.image = self.frames[self.state][self.frame]
-        self.mask = pygame.mask.from_surface(self.image)
 
     def action(self, event):
         if event.type == pygame.KEYDOWN :
@@ -156,8 +149,6 @@ class Player(pygame.sprite.Sprite):
         x, y = round(self.x - w / 2), round(self.y - h)
         self.rect = pygame.Rect(x, y, w, h)
 
-
-        prev_x, prev_y = self.x, self.y
         if self.direction == 1:
             self.y -= 5
         elif self.direction == 2:
@@ -168,8 +159,6 @@ class Player(pygame.sprite.Sprite):
         elif self.direction == 4:
             self.flip = True
             self.x += 5
-        if pygame.sprite.spritecollideany(self, collision_group):
-            self.x, self.y = prev_x, prev_y
 
 
 class Enemy(pygame.sprite.Sprite):
