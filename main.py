@@ -15,6 +15,22 @@ if __name__ == '__main__':
     running = True
     player = Player()
     level = Level()
+    Border(0, 64, width, 64)
+    Border(0, height - 64, width, height - 64)
+    Border(64, 0, 64, height)
+    Border(width - 64, 0, width - 64, height)
+    Border(0, 62, width, 62)
+    Border(0, height - 62, width, height - 62)
+    Border(62, 0, 62, height)
+    Border(width - 62, 0, width - 62, height)
+    Border(0, 60, width, 60)
+    Border(0, height - 60, width, height - 60)
+    Border(60, 0, 60, height)
+    Border(width - 60, 0, width - 60, height)
+    Border(0, 58, width, 58)
+    Border(0, height - 58, width, height - 58)
+    Border(58, 0, 58, height)
+    Border(width - 58, 0, width - 58, height)
     while running:
         for event in pygame.event.get():
             stuff.gl_event = event
@@ -22,6 +38,8 @@ if __name__ == '__main__':
                 running = False
             elif event.type == ANIMATIONTICK:
                 update_sprites()
+                for i in arrow_group:
+                    i.update()
             else:
                 player.action(event)
         screen.fill((69, 69, 69))
@@ -29,6 +47,9 @@ if __name__ == '__main__':
         tiles_group.draw(screen)
         enemies_group.draw(screen)
         player_group.draw(screen)
+        arrow_group.draw(screen)
+        for i in borders_group:
+            i.draw(screen)
         pygame.draw.circle(screen, (0, 0, 0), (player.x, player.y), 3)
         clock.tick(fps)
         pygame.display.flip()
