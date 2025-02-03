@@ -7,6 +7,12 @@ all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemies_group = pygame.sprite.Group()
+horizontal_up_borders = pygame.sprite.Group()
+vertical_left_borders = pygame.sprite.Group()
+horizontal_down_borders = pygame.sprite.Group()
+vertical_right_borders = pygame.sprite.Group()
+borders_group = [horizontal_up_borders, horizontal_down_borders, vertical_right_borders, vertical_left_borders]
+arrow_group = pygame.sprite.Group()
 
 collision_group = pygame.sprite.Group()
 damage_group = pygame.sprite.Group()
@@ -14,6 +20,7 @@ damage_group = pygame.sprite.Group()
 collision_tiles = ['wall']
 damage_tiles = ['lava']
 tile_width = tile_height = 64
+
 
 def load_image(name):
     fullname = os.path.join('data/', name)
@@ -24,6 +31,7 @@ def load_image(name):
     image = pygame.image.load(fullname)
     return image
 
+
 tile_images = {
     'wall': load_image('sprites/tiles/wall.png'),
     'floor': load_image('sprites/tiles/floor.png'),
@@ -32,8 +40,32 @@ tile_images = {
     'exit': load_image('sprites/tiles/floor.png')
 }
 
+
 def save():
     pass
+
+
+class Border(pygame.sprite.Sprite):
+    # строго вертикальный или строго горизонтальный отрезок
+    def __init__(self, x1, y1, x2, y2):
+        super().__init__(all_sprites)
+        print(x1, x2, 2 * tile_width)
+        if x1 == x2 and x1 <= (tile_width * 2):  # вертикальная левая стенка
+            self.add(vertical_left_borders)
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
+        elif x1 == x2 and x1 > (tile_width * 2):  # вертикальная правая стенка
+            self.add(vertical_right_borders)
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
+        elif y1 == y2 and y1 <= (tile_height * 2):  # горизонтальная  верхняя стенка
+            self.add(horizontal_up_borders)
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
+        else: # горизонтальная нижняя стенка
+            self.add(horizontal_down_borders)
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -47,6 +79,62 @@ class Tile(pygame.sprite.Sprite):
         self.image = tile_images[tile_type]
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
+
+
+class Ball(pygame.sprite.Sprite):
+    def __init__(self, radius, x, y, x2, y2):
+        super().__init__(arrow_group)
+        self.radius = radius
+        self.tier = 3 # уровень пули
+        self.dc = 0 # счетчик отскоков до смерти
+        self.move_counter = 0
+        self.image = pygame.Surface((2 * radius, 2 * radius),
+                                    pygame.SRCALPHA, 32)
+        pygame.draw.circle(self.image, pygame.Color("red"),
+                           (radius, radius), radius)
+        self.rect = pygame.Rect(x, y, 2 * radius, 2 * radius)
+        '''am_x = 1
+        am_y = 1
+        v_x = x2 - x
+        v_y = y2 - y
+        while v_x > 5:
+            v_x = v_x / 5
+            am_x += 1
+        while v_y > 5:
+            v_y = v_y / 5
+            am_y += 1'''
+        self.vx = (x2 - x) / 15 # скорость пули
+        self.vy = (y2 - y) / 15 # скорость пули
+
+    def update(self):
+        self.rect = self.rect.move(self.vx, self.vy)
+        self.move_counter += 1
+        if self.tier == 3:
+            if pygame.sprite.spritecollideany(self, horizontal_up_borders) or\
+                    pygame.sprite.spritecollideany(self, horizontal_down_borders):
+                self.vy = -self.vy
+                self.dc += 1
+            if pygame.sprite.spritecollideany(self, vertical_left_borders) or \
+                    pygame.sprite.spritecollideany(self, vertical_right_borders):
+                self.vx = -self.vx
+                self.dc += 1
+            if self.move_counter == 60:
+                self.kill()
+        elif self.tier == 2:
+            if self.move_counter == 15:
+                self.kill()
+            if pygame.sprite.spritecollideany(self, horizontal_up_borders) or\
+                    pygame.sprite.spritecollideany(self, horizontal_down_borders) or\
+                    pygame.sprite.spritecollideany(self, vertical_left_borders) or\
+                    pygame.sprite.spritecollideany(self, vertical_right_borders):
+                self.kill()
+        else:
+            if pygame.sprite.spritecollideany(self, enemies_group) or \
+                    pygame.sprite.spritecollideany(self, horizontal_up_borders) or\
+                    pygame.sprite.spritecollideany(self, horizontal_down_borders) or\
+                    pygame.sprite.spritecollideany(self, vertical_left_borders) or\
+                    pygame.sprite.spritecollideany(self, vertical_right_borders):
+                self.kill()
 
 
 class Level:
@@ -132,7 +220,7 @@ class Player(pygame.sprite.Sprite):
         self.image = self.frames[self.hero][self.state][self.frame]
         self.mask = pygame.mask.from_surface(self.image)
 
-        self.hp = 100
+        self.hp = 300
 
     def get_damage(self, damage):
         if gl_event.type == pygame.USEREVENT + 2:
@@ -159,6 +247,12 @@ class Player(pygame.sprite.Sprite):
             if event.button == 1:
                 if self.state != 2:
                     self.frame, self.state = 0, 2
+                if self.hero == 1:
+                    pos = pygame.mouse.get_pos()
+                    if pos[0] >= self.x and self.flip == False:
+                        Ball(5, self.x, self.y - 50, pos[0], pos[1])
+                    elif pos[0] <= self.x and self.flip == True:
+                        Ball(5, self.x - 10, self.y - 50, pos[0], pos[1])
 
         if self.direction and not self.state == 2:
             self.state = 1
@@ -180,40 +274,47 @@ class Player(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, w, h)
 
     def update(self):
+        go_flag = True
+        tx = self.x
+        ty = self.y
+        px = self.x
+        py = self.y
         if self.state == 2:
             return
         if self.direction:
-            self.px, self.py = self.x, self.y
+            px, py = tx, ty
         if self.direction == 1:
-            if self.hero:
-                self.y += 2
-            self.y -= 4
-            self.py += 5
+            if not pygame.sprite.spritecollideany(self, horizontal_up_borders):
+                if self.hero:
+                    ty += 2
+                ty -= 4
+                py += 4
         elif self.direction == 2:
-            self.flip = False
-            if self.hero:
-                self.flip = True
-                self.x += 2
-            self.x -= 4
-            self.px += 5
-        elif self.direction == 3:
-            if self.hero:
-                self.y -= 2
-            self.y += 4
-            self.py -= 5
-        elif self.direction == 4:
-            self.flip = True
-            if self.hero:
+            if not pygame.sprite.spritecollideany(self, vertical_left_borders):
                 self.flip = False
-                self.x -= 2
-            self.x += 4
-            self.px -= 5
-        for sprite in collision_group:
-            if pygame.sprite.collide_mask(self, sprite):
-                self.x, self.y = self.px, self.py
+                if self.hero:
+                    self.flip = True
+                    tx += 2
+                tx -= 4
+                px += 4
+        elif self.direction == 3:
+            if not pygame.sprite.spritecollideany(self, horizontal_down_borders):
+                if self.hero:
+                    ty -= 2
+                ty += 4
+                py -= 4
+        elif self.direction == 4:
+            if not pygame.sprite.spritecollideany(self, vertical_right_borders):
+                self.flip = True
+                if self.hero:
+                    self.flip = False
+                    tx -= 2
+                tx += 4
+                px -= 4
         for sprite in damage_group:
             if pygame.sprite.collide_mask(self, sprite):
                 self.get_damage(1)
+        self.x, self.y = tx, ty
 
 
 class Enemy(pygame.sprite.Sprite):
