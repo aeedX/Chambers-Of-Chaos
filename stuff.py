@@ -139,13 +139,13 @@ class Ball(pygame.sprite.Sprite):
 
 class Level:
     def __init__(self):
-        self.lvl_id = 1
+        self.lvl_id = 3
         self.lvl = []
         self.spawnpoints = []
-        self.load_level(self.lvl_id)
+        self.load_level()
 
-    def load_level(self, lvl_id):
-        lvl_map = map(str.strip, open(f'data/levels/{lvl_id}.txt', 'r'))
+    def load_level(self):
+        lvl_map = map(str.strip, open(f'data/levels/{self.lvl_id}.txt', 'r'))
         lvl = [[s for s in row] for row in lvl_map]
 
         tiles_group.empty()
@@ -220,12 +220,18 @@ class Player(pygame.sprite.Sprite):
         self.image = self.frames[self.hero][self.state][self.frame]
         self.mask = pygame.mask.from_surface(self.image)
 
-        self.hp = 300
+        self.hp = 250
 
-    def get_damage(self, damage):
-        if gl_event.type == pygame.USEREVENT + 2:
-            self.hp -= damage
-            print(self.hp)
+
+    def get_damage(self, damage=1):
+        #if gl_event.type == pygame.USEREVENT + 2:
+        #    self.hp -= damage
+        #    print(123123123123123123123123123123123123123123123123123123)
+        #    print(self.hp)
+
+        self.hp -= damage
+        print(self.hp)
+
         if self.hp <= 0:
             self.kill()
 
@@ -286,13 +292,15 @@ class Player(pygame.sprite.Sprite):
         if self.direction:
             px, py = tx, ty
         if self.direction == 1:
-            if not pygame.sprite.spritecollideany(self, horizontal_up_borders):
+            #if not pygame.sprite.spritecollideany(self, horizontal_up_borders):
+            if True:
                 if self.hero:
                     ty += 2
                 ty -= 4
                 py += 4
         elif self.direction == 2:
-            if not pygame.sprite.spritecollideany(self, vertical_left_borders):
+            #if not pygame.sprite.spritecollideany(self, vertical_left_borders):
+            if True:
                 self.flip = False
                 if self.hero:
                     self.flip = True
@@ -300,23 +308,29 @@ class Player(pygame.sprite.Sprite):
                 tx -= 4
                 px += 4
         elif self.direction == 3:
-            if not pygame.sprite.spritecollideany(self, horizontal_down_borders):
+            #if not pygame.sprite.spritecollideany(self, horizontal_down_borders):
+            if True:
                 if self.hero:
                     ty -= 2
                 ty += 4
                 py -= 4
         elif self.direction == 4:
-            if not pygame.sprite.spritecollideany(self, vertical_right_borders):
+            #if not pygame.sprite.spritecollideany(self, vertical_right_borders):
+            if True:
                 self.flip = True
                 if self.hero:
                     self.flip = False
                     tx -= 2
                 tx += 4
                 px -= 4
+        if tx < 80 or tx > 1088 - 80 or ty < 160 or ty > 704 - 128:
+            self.x, self.y = px, py
+        else:
+            self.x, self.y = tx, ty
         for sprite in damage_group:
             if pygame.sprite.collide_mask(self, sprite):
-                self.get_damage(1)
-        self.x, self.y = tx, ty
+                self.get_damage(0.5)
+        #self.x, self.y = tx, ty
     
     def get_cords(self):
         return self.x, self.y
@@ -329,7 +343,7 @@ class Player(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, enemy_type, ceil_x, ceil_y):
         super().__init__(enemies_group, all_sprites)
-        self.direction = 0
+        self.direction = [0, 0]
         self.rect = pygame.Rect(0, 0, 1, 1)
         running = load_image(f'sprites/enemies/{enemy_type}_running.png')
         attack = load_image(f'sprites/enemies/{enemy_type}_attack.png')
@@ -337,18 +351,22 @@ class Enemy(pygame.sprite.Sprite):
             self.frames = [cut_sheet(attack, 1, 6)[:1],
                            cut_sheet(running, 1, 6),
                            cut_sheet(attack, 1, 6)]
+            self.damage = 0.1
         elif enemy_type == 'skeleton':
             self.frames = [cut_sheet(attack, 1, 8)[:1],
                            cut_sheet(running, 1, 8),
                            cut_sheet(attack, 1, 8)]
+            self.damage = 1
         elif enemy_type == 'ork':
             self.frames = [cut_sheet(attack, 1, 4)[:1],
                            cut_sheet(running, 1, 7),
                            cut_sheet(attack, 1, 4)]
+            self.damage = 2
         else:
             self.frames = [cut_sheet(attack, 1, 2)[:1],
                            cut_sheet(running, 1, 4),
                            cut_sheet(attack, 1, 2)]
+            self.damage = 3
         self.frame, self.state = 0, 1
         self.flip = False
         self.image = self.frames[self.state][self.frame]
@@ -357,15 +375,9 @@ class Enemy(pygame.sprite.Sprite):
 
         self.hp = 100
 
-    def get_damage(self, damage):
-        if pygame.sprite.spritecollideany(self, arrow_group):
-            self.hp -= damage
-            print(self.hp)
-        for i in player_group:
-            if pygame.sprite.spritecollideany(self, player_group) and i.get_state() == 2:
-                self.hp -= damage
-                print(self.hp)
-        if self.hp == 0:
+    def get_damage(self, damage=1):
+        self.hp -= damage
+        if self.hp <= 0:
             self.kill()
 
     def action(self, event):
@@ -403,7 +415,7 @@ class Enemy(pygame.sprite.Sprite):
         else:
             self.direction[1] = 1
         if x == 0 and y == 0:
-            self.direction = 0
+            self.direction = [0, 0]
         tx = self.x
         ty = self.y
         if self.state == 2:
@@ -423,12 +435,13 @@ class Enemy(pygame.sprite.Sprite):
                 self.flip = True
                 tx += 2
         if pygame.sprite.spritecollideany(self, arrow_group):
-            self.get_damage()
+            self.get_damage(10)
         if pygame.sprite.spritecollideany(self, player_group):
-            self.get_damage()
-        for sprite in damage_group:
-            if pygame.sprite.collide_mask(self, sprite):
-                self.get_damage(10)
+            for player in player_group:
+                if player.state == 2:
+                    self.get_damage(10)
+                else:
+                    player.get_damage(self.damage)
         self.x, self.y = tx, ty
 
 
