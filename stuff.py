@@ -118,7 +118,7 @@ class Ball(pygame.sprite.Sprite):
                     pygame.sprite.spritecollideany(self, vertical_right_borders):
                 self.vx = -self.vx
                 self.dc += 1
-            if self.move_counter == 60:
+            if self.move_counter == 150:
                 self.kill()
         elif self.tier == 2:
             if self.move_counter == 15:
@@ -226,6 +226,8 @@ class Player(pygame.sprite.Sprite):
         if gl_event.type == pygame.USEREVENT + 2:
             self.hp -= damage
             print(self.hp)
+        if self.hp <= 0:
+            self.kill()
 
     def action(self, event):
         if event.type == pygame.KEYDOWN :
@@ -315,6 +317,13 @@ class Player(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, sprite):
                 self.get_damage(1)
         self.x, self.y = tx, ty
+    
+    def get_cords(self):
+        return self.x, self.y
+
+    def get_state(self):
+        print(self.state)
+        return self.state
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -349,9 +358,15 @@ class Enemy(pygame.sprite.Sprite):
         self.hp = 100
 
     def get_damage(self, damage):
-        if gl_event.type == pygame.USEREVENT + 2:
+        if pygame.sprite.spritecollideany(self, arrow_group):
             self.hp -= damage
             print(self.hp)
+        for i in player_group:
+            if pygame.sprite.spritecollideany(self, player_group) and i.get_state() == 2:
+                self.hp -= damage
+                print(self.hp)
+        if self.hp == 0:
+            self.kill()
 
     def action(self, event):
         if self.direction and not self.state == 2:
@@ -374,30 +389,47 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, w, h)
 
     def update(self):
+        x = 0
+        y = 0
+        for i in player_group:
+            x, y = i.get_cords()
+        self.direction = [0, 0]
+        if self.x < x:
+            self.direction[0] = 4
+        else:
+            self.direction[0] = 2
+        if self.y < y:
+            self.direction[1] = 3
+        else:
+            self.direction[1] = 1
+        if x == 0 and y == 0:
+            self.direction = 0
+        tx = self.x
+        ty = self.y
         if self.state == 2:
             return
-        if self.direction:
-            self.px, self.py = self.x, self.y
-        if self.direction == 1:
-            self.y -= 4
-            self.py += 5
-        elif self.direction == 2:
-            self.flip = False
-            self.x -= 4
-            self.px += 5
-        elif self.direction == 3:
-            self.y += 4
-            self.py -= 5
-        elif self.direction == 4:
-            self.flip = True
-            self.x += 4
-            self.px -= 5
-        for sprite in collision_group:
-            if pygame.sprite.collide_mask(self, sprite):
-                self.x, self.y = self.px, self.py
+        if self.direction[1] == 1:
+            if not pygame.sprite.spritecollideany(self, horizontal_up_borders):
+                ty -= 2
+        elif self.direction[1] == 3:
+            if not pygame.sprite.spritecollideany(self, horizontal_down_borders):
+                ty += 2
+        if self.direction[0] == 2:
+            if not pygame.sprite.spritecollideany(self, vertical_left_borders):
+                self.flip = False
+                tx -= 2
+        elif self.direction[0] == 4:
+            if not pygame.sprite.spritecollideany(self, vertical_right_borders):
+                self.flip = True
+                tx += 2
+        if pygame.sprite.spritecollideany(self, arrow_group):
+            self.get_damage()
+        if pygame.sprite.spritecollideany(self, player_group):
+            self.get_damage()
         for sprite in damage_group:
             if pygame.sprite.collide_mask(self, sprite):
-                self.get_damage(1)
+                self.get_damage(10)
+        self.x, self.y = tx, ty
 
 
 def update_sprites():
