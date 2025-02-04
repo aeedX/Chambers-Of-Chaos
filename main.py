@@ -40,6 +40,8 @@ if __name__ == '__main__':
                 update_sprites()
                 for i in arrow_group:
                     i.update()
+                for i in enemies_group:
+                    i.update()
             else:
                 player.action(event)
         screen.fill((69, 69, 69))
