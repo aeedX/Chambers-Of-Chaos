@@ -1,6 +1,5 @@
 import stuff
 from stuff import *
-print(123)
 
 if __name__ == '__main__':
     pygame.init()
@@ -43,10 +42,6 @@ if __name__ == '__main__':
                 running = False
             elif event.type == ANIMATIONTICK:
                 update_sprites()
-                for i in arrow_group:
-                    i.update()
-                for i in enemies_group:
-                    i.update()
             else:
                 player.action(event)
         if not enemies_group.sprites():
@@ -60,6 +55,8 @@ if __name__ == '__main__':
                 #game end
         screen.fill((69, 69, 69))
         player.update()
+        arrow_group.update()
+        enemies_group.update()
         tiles_group.draw(screen)
         enemies_group.draw(screen)
         player_group.draw(screen)

@@ -1,6 +1,6 @@
 import pygame
 import sys, os
-from random import choice
+from random import choice, randint
 
 from pygame.cursors import arrow
 
@@ -231,14 +231,13 @@ class Player(pygame.sprite.Sprite):
         self.flip = False
         self.image = self.frames[self.hero][self.state][self.frame]
 
-        self.max_hp = 200
-        self.hp = 200
+        self.max_hp = 250
+        self.hp = 250
         self.damage = 10
         self.speed = 4
         if self.hero:
-            self.max_hp = 150
-            self.hp = 150
-            self.damage = 5
+            self.max_hp = 125
+            self.hp = 125
             self.speed = 2
 
 
@@ -353,17 +352,15 @@ class Player(pygame.sprite.Sprite):
             self.x, self.y = px, py
         else:
             self.x, self.y = tx, ty
-        for sprite in damage_group:
-            if pygame.sprite.collide_mask(self, sprite):
-                self.get_damage(0.5)
+        if pygame.sprite.spritecollideany(self, damage_group):
+            for sprite in damage_group:
+                if pygame.sprite.collide_mask(self, sprite):
+                    self.get_damage(0.5)
         #self.x, self.y = tx, ty
-    
-    def get_cords(self):
-        return self.x, self.y
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, enemy_type, ceil_x, ceil_y):
+    def __init__(self, enemy_type, x, y):
         super().__init__(enemies_group, all_sprites)
         self.direction = [0, 0]
         self.rect = pygame.Rect(0, 0, 1, 1)
@@ -374,25 +371,29 @@ class Enemy(pygame.sprite.Sprite):
                            cut_sheet(running, 1, 6),
                            cut_sheet(attack, 1, 6)]
             self.damage = 0.1
+            self.speed = 1
         elif enemy_type == 'skeleton':
             self.frames = [cut_sheet(attack, 1, 8)[:1],
                            cut_sheet(running, 1, 8),
                            cut_sheet(attack, 1, 8)]
             self.damage = 1
+            self.speed = 2
         elif enemy_type == 'ork':
             self.frames = [cut_sheet(attack, 1, 4)[:1],
                            cut_sheet(running, 1, 7),
                            cut_sheet(attack, 1, 4)]
             self.damage = 2
+            self.speed = 2
         else:
             self.frames = [cut_sheet(attack, 1, 2)[:1],
                            cut_sheet(running, 1, 4),
                            cut_sheet(attack, 1, 2)]
             self.damage = 3
+            self.speed = 1
         self.frame, self.state = 0, 1
         self.flip = False
         self.image = self.frames[self.state][self.frame]
-        self.x, self.y = round(ceil_x + tile_width / 2), ceil_y + tile_height
+        self.x, self.y = x, y
         self.mask = pygame.mask.from_surface(self.image)
 
         self.hp = 100
@@ -423,39 +424,37 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, w, h)
 
     def update(self):
-        x = 0
-        y = 0
-        for i in player_group:
-            x, y = i.get_cords()
-        self.direction = [0, 0]
-        if self.x < x:
-            self.direction[0] = 4
+        x, y = 0, 0
+        for player in player_group:
+            x, y = player.x, player.y
+        tx, ty = self.x, self.y
+        if x - self.x > abs(self.y - y):
+            self.direction = 4
+        elif self.x - x > abs(self.y - y):
+            self.direction = 2
+        elif y - self.y > abs(self.x - x):
+            self.direction = 3
         else:
-            self.direction[0] = 2
-        if self.y < y:
-            self.direction[1] = 3
-        else:
-            self.direction[1] = 1
-        if x == 0 and y == 0:
-            self.direction = [0, 0]
-        tx = self.x
-        ty = self.y
+            self.direction = 1
+
         if self.state == 2:
             return
-        if self.direction[1] == 1:
-            if not pygame.sprite.spritecollideany(self, horizontal_up_borders):
-                ty -= 2
-        elif self.direction[1] == 3:
-            if not pygame.sprite.spritecollideany(self, horizontal_down_borders):
-                ty += 2
-        if self.direction[0] == 2:
-            if not pygame.sprite.spritecollideany(self, vertical_left_borders):
-                self.flip = False
-                tx -= 2
-        elif self.direction[0] == 4:
-            if not pygame.sprite.spritecollideany(self, vertical_right_borders):
-                self.flip = True
-                tx += 2
+        if self.direction == 1:
+            ty -= self.speed
+            tx += randint(-self.speed, self.speed)
+        elif self.direction == 2:
+            self.flip = False
+            tx -= self.speed
+            tx += randint(-self.speed, self.speed)
+        elif self.direction == 3:
+            ty += self.speed
+            ty += randint(-self.speed, self.speed)
+        else:
+            self.flip = True
+            tx += self.speed
+            ty += randint(-self.speed, self.speed)
+        if not (tx < 80 or tx > 1088 - 80 or ty < 120 or ty > 704 - 128):
+            self.x, self.y = tx, ty
         for arrow in arrow_group:
             if pygame.sprite.collide_mask(self, arrow):
                 self.get_damage(arrow.damage)
@@ -467,7 +466,6 @@ class Enemy(pygame.sprite.Sprite):
                 else:
                     player.get_damage(self.damage)
                 break
-        self.x, self.y = tx, ty
 
 
 def update_sprites():
