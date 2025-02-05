@@ -1,5 +1,6 @@
 import stuff
 from stuff import *
+print(123)
 
 if __name__ == '__main__':
     pygame.init()
@@ -8,6 +9,10 @@ if __name__ == '__main__':
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
     fps = 24
+
+    font = pygame.font.SysFont(None, 48)
+    next_lvl_tip = font.render('press ENTER for next lvl', True, (0, 0, 0))
+
     ANIMATIONTICK = pygame.USEREVENT + 1
     DAMAGE = pygame.USEREVENT + 2
     pygame.time.set_timer(ANIMATIONTICK, 60)
@@ -47,8 +52,9 @@ if __name__ == '__main__':
         if not enemies_group.sprites():
             arrow_group.empty()
             if level.lvl_id < 3:
-                level.lvl_id += 1
-                level.load_level()
+                pass
+                #level.lvl_id += 1
+                #level.load_level()
             else:
                 pass
                 #game end
@@ -61,6 +67,17 @@ if __name__ == '__main__':
         for i in borders_group:
             i.draw(screen)
         pygame.draw.circle(screen, (0, 0, 0), (player.x, player.y), 3)
+
+        health = font.render(str(int(player.hp)), True, (0, 0, 0))
+        max_health = font.render(str(int(player.max_hp)), True, (0, 0, 0))
+        damage = font.render(str(player.damage), True, (0, 0, 0))
+        speed = font.render(str(player.speed), True, (0, 0, 0))
+        screen.blit(health, (50, 656))
+        screen.blit(max_health, (150, 656))
+        screen.blit(damage, (250, 656))
+        screen.blit(speed, (350, 656))
+        if not enemies_group.sprites():
+            screen.blit(next_lvl_tip, (600, 656))
         clock.tick(fps)
         pygame.display.flip()
     pygame.quit()

@@ -1,5 +1,8 @@
 import pygame
 import sys, os
+from random import choice
+
+from pygame.cursors import arrow
 
 gl_event = None
 
@@ -13,9 +16,11 @@ horizontal_down_borders = pygame.sprite.Group()
 vertical_right_borders = pygame.sprite.Group()
 borders_group = [horizontal_up_borders, horizontal_down_borders, vertical_right_borders, vertical_left_borders]
 arrow_group = pygame.sprite.Group()
+level_group = []
 
 collision_group = pygame.sprite.Group()
 damage_group = pygame.sprite.Group()
+chest_group = pygame.sprite.Group()
 
 collision_tiles = ['wall']
 damage_tiles = ['lava']
@@ -49,7 +54,6 @@ class Border(pygame.sprite.Sprite):
     # строго вертикальный или строго горизонтальный отрезок
     def __init__(self, x1, y1, x2, y2):
         super().__init__(all_sprites)
-        print(x1, x2, 2 * tile_width)
         if x1 == x2 and x1 <= (tile_width * 2):  # вертикальная левая стенка
             self.add(vertical_left_borders)
             self.image = pygame.Surface([1, y2 - y1])
@@ -72,17 +76,21 @@ class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         tile_groups = [tiles_group, all_sprites]
         if tile_type in collision_tiles:
-            tile_groups.append(collision_group)
+            pass
+            #tile_groups.append(collision_group)
         if tile_type in damage_tiles:
             tile_groups.append(damage_group)
+        if tile_type == 'chest':
+            tile_groups.append(chest_group)
+            self.content = choice(('speed', 'hp', 'damage'))
         super().__init__(*tile_groups)
         self.image = tile_images[tile_type]
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(tile_width * pos_x, tile_height * pos_y)
 
 
-class Ball(pygame.sprite.Sprite):
-    def __init__(self, radius, x, y, x2, y2):
+class Arrow(pygame.sprite.Sprite):
+    def __init__(self, radius, x, y, x2, y2, damage=10):
         super().__init__(arrow_group)
         self.radius = radius
         self.tier = 3 # уровень пули
@@ -105,6 +113,8 @@ class Ball(pygame.sprite.Sprite):
             am_y += 1'''
         self.vx = (x2 - x) / 15 # скорость пули
         self.vy = (y2 - y) / 15 # скорость пули
+
+        self.damage = damage
 
     def update(self):
         self.rect = self.rect.move(self.vx, self.vy)
@@ -139,7 +149,8 @@ class Ball(pygame.sprite.Sprite):
 
 class Level:
     def __init__(self):
-        self.lvl_id = 3
+        level_group.append(self)
+        self.lvl_id = 0
         self.lvl = []
         self.spawnpoints = []
         self.load_level()
@@ -160,6 +171,7 @@ class Level:
                     # герой
                     Tile('floor', x, y)
                     for player in player_group:
+                        player.hp = player.max_hp
                         player.x, player.y = x * tile_width + tile_width / 2, (y + 1) * tile_height
                 elif lvl[y][x] == '*':
                     Tile('lava', x, y)
@@ -218,15 +230,21 @@ class Player(pygame.sprite.Sprite):
         self.frame, self.state, self.hero = 0, 0, 0
         self.flip = False
         self.image = self.frames[self.hero][self.state][self.frame]
-        self.mask = pygame.mask.from_surface(self.image)
 
-        self.hp = 250
+        self.max_hp = 200
+        self.hp = 200
+        self.damage = 10
+        self.speed = 4
+        if self.hero:
+            self.max_hp = 150
+            self.hp = 150
+            self.damage = 5
+            self.speed = 2
 
 
-    def get_damage(self, damage=1):
+    def get_damage(self, damage=0.5):
         #if gl_event.type == pygame.USEREVENT + 2:
         #    self.hp -= damage
-        #    print(123123123123123123123123123123123123123123123123123123)
         #    print(self.hp)
 
         self.hp -= damage
@@ -245,6 +263,14 @@ class Player(pygame.sprite.Sprite):
                 self.direction = 3
             elif event.key == pygame.K_d:
                 self.direction = 4
+            elif event.key == pygame.K_RETURN and not enemies_group.sprites():
+                arrow_group.empty()
+                for level in level_group:
+                    if level.lvl_id < 3:
+                        level.lvl_id += 1
+                        level.load_level()
+                    else:
+                        pass
         elif event.type == pygame.KEYUP:
             if self.direction == 1 and event.key == pygame.K_w or\
                     self.direction == 2 and event.key == pygame.K_a or\
@@ -258,9 +284,9 @@ class Player(pygame.sprite.Sprite):
                 if self.hero == 1:
                     pos = pygame.mouse.get_pos()
                     if pos[0] >= self.x and self.flip == False:
-                        Ball(5, self.x, self.y - 50, pos[0], pos[1])
+                        Arrow(5, self.x, self.y - 50, pos[0], pos[1], damage=self.damage)
                     elif pos[0] <= self.x and self.flip == True:
-                        Ball(5, self.x - 10, self.y - 50, pos[0], pos[1])
+                        Arrow(5, self.x - 10, self.y - 50, pos[0], pos[1], damage=self.damage)
 
         if self.direction and not self.state == 2:
             self.state = 1
@@ -276,6 +302,7 @@ class Player(pygame.sprite.Sprite):
                 self.frame, self.state = 0, 0
                 self.attack = 0
         self.image = pygame.transform.flip(self.frames[self.hero][self.state][self.frame], self.flip, False)
+        self.mask = pygame.mask.from_surface(self.image)
         w, h = self.image.get_width(), self.image.get_height()
         #w, h = 96, 96
         x, y = round(self.x - w / 2), round(self.y - h)
@@ -287,42 +314,41 @@ class Player(pygame.sprite.Sprite):
         ty = self.y
         px = self.x
         py = self.y
+        for chest in chest_group:
+            if pygame.sprite.collide_mask(self, chest) and self.state == 2:
+                print(chest.content)
+                if chest.content == 'speed':
+                    self.speed += 1
+                elif chest.content == 'hp':
+                    self.max_hp += 50
+                    self.hp += 50
+                elif chest.content == 'damage':
+                    self.damage += 5
+                chest.kill()
         if self.state == 2:
             return
         if self.direction:
             px, py = tx, ty
         if self.direction == 1:
-            #if not pygame.sprite.spritecollideany(self, horizontal_up_borders):
-            if True:
-                if self.hero:
-                    ty += 2
-                ty -= 4
-                py += 4
+            ty -= self.speed
+            py += self.speed
         elif self.direction == 2:
-            #if not pygame.sprite.spritecollideany(self, vertical_left_borders):
-            if True:
-                self.flip = False
-                if self.hero:
-                    self.flip = True
-                    tx += 2
-                tx -= 4
-                px += 4
-        elif self.direction == 3:
-            #if not pygame.sprite.spritecollideany(self, horizontal_down_borders):
-            if True:
-                if self.hero:
-                    ty -= 2
-                ty += 4
-                py -= 4
-        elif self.direction == 4:
-            #if not pygame.sprite.spritecollideany(self, vertical_right_borders):
-            if True:
+            self.flip = False
+            if self.hero:
                 self.flip = True
-                if self.hero:
-                    self.flip = False
-                    tx -= 2
-                tx += 4
-                px -= 4
+            tx -= self.speed
+            px += self.speed
+
+        elif self.direction == 3:
+            ty += self.speed
+            py -= self.speed
+        elif self.direction == 4:
+            self.flip = True
+            if self.hero:
+                self.flip = False
+            tx += self.speed
+            px -= self.speed
+
         if tx < 80 or tx > 1088 - 80 or ty < 160 or ty > 704 - 128:
             self.x, self.y = px, py
         else:
@@ -334,10 +360,6 @@ class Player(pygame.sprite.Sprite):
     
     def get_cords(self):
         return self.x, self.y
-
-    def get_state(self):
-        print(self.state)
-        return self.state
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -434,14 +456,17 @@ class Enemy(pygame.sprite.Sprite):
             if not pygame.sprite.spritecollideany(self, vertical_right_borders):
                 self.flip = True
                 tx += 2
-        if pygame.sprite.spritecollideany(self, arrow_group):
-            self.get_damage(10)
-        if pygame.sprite.spritecollideany(self, player_group):
-            for player in player_group:
+        for arrow in arrow_group:
+            if pygame.sprite.collide_mask(self, arrow):
+                self.get_damage(arrow.damage)
+                break
+        for player in player_group:
+            if pygame.sprite.collide_mask(self, player):
                 if player.state == 2:
-                    self.get_damage(10)
+                    self.get_damage(player.damage)
                 else:
                     player.get_damage(self.damage)
+                break
         self.x, self.y = tx, ty
 
 
