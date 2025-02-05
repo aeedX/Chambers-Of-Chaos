@@ -1,4 +1,5 @@
 import stuff
+from screens import start_screen
 from stuff import *
 
 if __name__ == '__main__':
@@ -17,7 +18,8 @@ if __name__ == '__main__':
     pygame.time.set_timer(ANIMATIONTICK, 60)
     pygame.time.set_timer(DAMAGE, 1)
     running = True
-    player = Player()
+    st = start_screen(screen, width, height, clock, fps)
+    player = Player(st)
     level = Level()
     Border(0, 64, width, 64)
     Border(0, height - 64 - 64, width, height - 64 - 64)
