@@ -112,3 +112,15 @@ def settings(screen, width, height, clock, fps):
         pygame.display.flip()
         clock.tick(fps)
 
+
+def end(screen, width, height, clock, fps):
+    fon = pygame.transform.scale(load_image('fon/ending.png'), (width, height))
+    screen.blit(fon, (0, 0))
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                return
+        pygame.display.flip()
+        clock.tick(fps)
