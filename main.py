@@ -53,8 +53,8 @@ if __name__ == '__main__':
                 #level.lvl_id += 1
                 #level.load_level()
             else:
-                pass
-                #game end
+                end(screen, width, height, clock, fps)
+                break
         screen.fill((69, 69, 69))
         player.update()
         arrow_group.update()
