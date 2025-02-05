@@ -1,6 +1,7 @@
 import pygame
 import sys, os
 from random import choice, randint
+import json
 
 from pygame.cursors import arrow
 
@@ -46,8 +47,53 @@ tile_images = {
 }
 
 
-def save():
-    pass
+def save(save_name, username, player, level):
+    with open('data/saves/saves_data.json') as f:
+        saves = json.load(f)
+    f.close()
+    if level == 4:
+        os.remove(f'data/saves/{save_name}.json')
+        del saves[saves.index(save_name)]
+    else:
+        with open(f'data/saves/{save_name}.json', 'w') as f:
+            data = {
+                'score': player.score,
+                'hero': player.hero,
+                'max_hp': player.max_hp,
+                'damage': player.damage,
+                'speed': player.speed,
+                'lvl_id': level.lvl_id,
+                'username': username
+            }
+            json.dump(data, f)
+        f.close()
+        if save_name not in saves:
+            saves.append(save_name)
+    with open('data/saves/saves_data.json', 'w') as f:
+        json.dump(saves, f)
+    f.close()
+
+    with open('data/leaderboard.json', 'r') as f:
+        table = json.load(f)
+        print(table)
+    f.close()
+    with open('data/leaderboard.json', 'w') as f:
+        if username in table.keys():
+            if player.hero:
+                if table[username] < player.score / 500:
+                    table[username] = player.score / 500
+            else:
+                if table[username] < player.score / 1000:
+                    table[username] = player.score / 1000
+        else:
+            if player.hero:
+                table[username] = player.score / 500
+            else:
+                table[username] = player.score / 1000
+        table = dict(reversed(sorted(table.items(), key=lambda item: item[1])))
+        print(table)
+        json.dump(table, f)
+    f.close()
 
 
 class Border(pygame.sprite.Sprite):
@@ -148,9 +194,9 @@ class Arrow(pygame.sprite.Sprite):
 
 
 class Level:
-    def __init__(self):
+    def __init__(self, lvl_id):
         level_group.append(self)
-        self.lvl_id = 0
+        self.lvl_id = lvl_id
         self.lvl = []
         self.spawnpoints = []
         self.load_level()
@@ -211,8 +257,9 @@ def cut_sheet(sheet, rows, cols):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, st):
+    def __init__(self, score, hero, max_hp, damage, speed):
         super().__init__(player_group, all_sprites)
+        self.score = score
         self.x, self.y = 200, 200
         self.px, self.py = self.x, self.y
         self.direction, self.attack = 0, 0
@@ -227,18 +274,14 @@ class Player(pygame.sprite.Sprite):
                        [cut_sheet(archer_attack, 1, 8)[:1],
                        cut_sheet(archer_run, 1, 8),
                        cut_sheet(archer_attack, 1, 8)]]
-        self.frame, self.state, self.hero = 0, 0, st
+        self.frame, self.state, self.hero = 0, 0, hero
         self.flip = False
         self.image = self.frames[self.hero][self.state][self.frame]
 
-        self.max_hp = 250
-        self.hp = 250
-        self.damage = 10
-        self.speed = 4
-        if self.hero:
-            self.max_hp = 125
-            self.hp = 125
-            self.speed = 2
+        self.max_hp = max_hp
+        self.hp = max_hp
+        self.damage = damage
+        self.speed = speed
 
 
     def get_damage(self, damage=0.5):
@@ -250,6 +293,7 @@ class Player(pygame.sprite.Sprite):
         print(self.hp)
 
         if self.hp <= 0:
+
             self.kill()
 
     def action(self, event):
@@ -262,14 +306,6 @@ class Player(pygame.sprite.Sprite):
                 self.direction = 3
             elif event.key == pygame.K_d:
                 self.direction = 4
-            elif event.key == pygame.K_RETURN and not enemies_group.sprites():
-                arrow_group.empty()
-                for level in level_group:
-                    if level.lvl_id < 3:
-                        level.lvl_id += 1
-                        level.load_level()
-                    else:
-                        pass
         elif event.type == pygame.KEYUP:
             if self.direction == 1 and event.key == pygame.K_w or\
                     self.direction == 2 and event.key == pygame.K_a or\
@@ -371,25 +407,25 @@ class Enemy(pygame.sprite.Sprite):
                            cut_sheet(running, 1, 6),
                            cut_sheet(attack, 1, 6)]
             self.damage = 0.1
-            self.speed = 1
+            self.speed = 2
         elif enemy_type == 'skeleton':
             self.frames = [cut_sheet(attack, 1, 8)[:1],
                            cut_sheet(running, 1, 8),
                            cut_sheet(attack, 1, 8)]
             self.damage = 1
-            self.speed = 2
+            self.speed = 3
         elif enemy_type == 'ork':
             self.frames = [cut_sheet(attack, 1, 4)[:1],
                            cut_sheet(running, 1, 7),
                            cut_sheet(attack, 1, 4)]
             self.damage = 2
-            self.speed = 2
+            self.speed = 3
         else:
             self.frames = [cut_sheet(attack, 1, 2)[:1],
                            cut_sheet(running, 1, 4),
                            cut_sheet(attack, 1, 2)]
             self.damage = 3
-            self.speed = 1
+            self.speed = 2
         self.frame, self.state = 0, 1
         self.flip = False
         self.image = self.frames[self.state][self.frame]
@@ -437,6 +473,18 @@ class Enemy(pygame.sprite.Sprite):
         else:
             self.direction = 1
 
+        for arrow in arrow_group:
+            if pygame.sprite.collide_mask(self, arrow):
+                self.get_damage(arrow.damage)
+                break
+        for player in player_group:
+            if pygame.sprite.collide_mask(self, player):
+                if player.state == 2:
+                    self.get_damage(player.damage)
+                else:
+                    player.get_damage(self.damage)
+                break
+
         if self.state == 2:
             return
         if self.direction == 1:
@@ -455,17 +503,6 @@ class Enemy(pygame.sprite.Sprite):
             ty += randint(-self.speed, self.speed)
         if not (tx < 80 or tx > 1088 - 80 or ty < 120 or ty > 704 - 128):
             self.x, self.y = tx, ty
-        for arrow in arrow_group:
-            if pygame.sprite.collide_mask(self, arrow):
-                self.get_damage(arrow.damage)
-                break
-        for player in player_group:
-            if pygame.sprite.collide_mask(self, player):
-                if player.state == 2:
-                    self.get_damage(player.damage)
-                else:
-                    player.get_damage(self.damage)
-                break
 
 
 def update_sprites():
