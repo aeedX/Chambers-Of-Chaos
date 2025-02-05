@@ -211,7 +211,7 @@ def cut_sheet(sheet, rows, cols):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, st):
         super().__init__(player_group, all_sprites)
         self.x, self.y = 200, 200
         self.px, self.py = self.x, self.y
@@ -227,7 +227,7 @@ class Player(pygame.sprite.Sprite):
                        [cut_sheet(archer_attack, 1, 8)[:1],
                        cut_sheet(archer_run, 1, 8),
                        cut_sheet(archer_attack, 1, 8)]]
-        self.frame, self.state, self.hero = 0, 0, 0
+        self.frame, self.state, self.hero = 0, 0, st
         self.flip = False
         self.image = self.frames[self.hero][self.state][self.frame]
 
